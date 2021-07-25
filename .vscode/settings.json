@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "gd32vf103_gpio.h": "c",
+        "systick.h": "c"
+    },
+    "C_Cpp.default.includePath": [
+        "src",
+        "sdk/GD32VF103_standard_peripheral",
+        "sdk/GD32VF103_standard_peripheral/Include",
+        "sdk/RISCV/drivers",
+    ],
+    "C_Cpp.default.defines": [
+        "GD32VF103V_EVAL"
+    ],
+    "C_Cpp.clang_format_style": "Webkit"
+}
