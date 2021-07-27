@@ -16,9 +16,15 @@ set(TARGET main)
 # add the executable
 add_executable(${TARGET}.elf 
     src/main.c
+    src/communication.c
+    src/config.c
+    src/motor_control.c
     
     src/systick.c
     ${DRIVER_ROOT}/system_gd32vf103.c
+    ${DRIVER_ROOT}/Source/gd32vf103_gpio.c
+    ${DRIVER_ROOT}/Source/gd32vf103_timer.c
+    ${SDK_CORE_ROOT}/drivers/n200_func.c
     ${SDK_INIT_ROOT}/init.c
     ${SDK_INIT_ROOT}/handlers.c
     ${SDK_INIT_ROOT}/entry.S
