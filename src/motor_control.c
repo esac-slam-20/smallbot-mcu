@@ -1,3 +1,14 @@
+/**
+ * @file motor_control.c
+ * @author Jim Jiang (jim@lotlab.org)
+ * @brief 电机控制相关代码。负责接受速度，控制PWM，并读取编码器信息。
+ * @version 0.1
+ * @date 2021-07-28
+ * 
+ * @copyright Copyright (c) GDUT ESAC 2021
+ * 
+ */
+
 #include "motor_control.h"
 #include "communication.h"
 #include "config.h"
@@ -35,6 +46,13 @@ struct Motor motors[MOTOR_COUNT] = {
         .OdomChannel = 0 },
 };
 
+/**
+ * @brief 设置指定电机的PWM值
+ * 
+ * @param motor 电机
+ * @param cw 正反转
+ * @param pwm PWM值
+ */
 static void motor_setPWM(struct Motor* motor, bool cw, uint16_t pwm)
 {
     // 设置方向
@@ -196,7 +214,7 @@ static void motor_InitTimer()
 }
 
 /**
- * @brief 初始化所有相关
+ * @brief 初始化所有电机相关外设
  * 
  */
 void motor_Init()
@@ -206,7 +224,12 @@ void motor_Init()
     motor_InitTimer();
 }
 
-static uint16_t motor_targetSpeeds[4];
+/**
+ * @brief 电机目标速度，rpm
+ * 
+ */
+static int16_t motor_targetSpeeds[4];
+
 /**
  * @brief 设置电机目标速度
  * 
@@ -217,15 +240,25 @@ void motor_SetSpeed(int16_t speeds[4])
     memcpy(motor_targetSpeeds, speeds, sizeof(motor_targetSpeeds));
 }
 
-int32_t decoder_val[4] = { 0 };
-uint16_t decoder_last_val[4] = { 0 };
+/**
+ * @brief 32位编码器值
+ * 
+ */
+static int32_t decoder_val[4] = { 0 };
 
 /**
- * @brief 电机控制Routine
+ * @brief 16位编码器值
+ * 
+ */
+static uint16_t decoder_last_val[4] = { 0 };
+
+/**
+ * @brief 电机控制过程，负责读取编码器并调用PID
  * 
  */
 static void motor_Routine()
 {
+    // 读取编码器数据
     int16_t delta[4] = { 0 };
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
         uint32_t timer = TIMER1 + i * 0x400;

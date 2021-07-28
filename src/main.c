@@ -8,6 +8,10 @@
 #include "communication.h"
 #include "config.h"
 
+/**
+ * @brief 初始化串口调试用UART
+ * 
+ */
 static void uart_init()
 {
     /* enable USART clock */

@@ -1,3 +1,13 @@
+/**
+ * @file config.c
+ * @author Jim Jiang (jim@lotlab.org)
+ * @brief 配置项目相关，定义了配置的存储与读取。
+ * @version 0.1
+ * @date 2021-07-28
+ * 
+ * @copyright Copyright (c) GDUT ESAC 2021
+ * 
+ */
 #include "config.h"
 #include <stdint.h>
 

@@ -1,5 +1,15 @@
-#pragma once
+/**
+ * @file gpio.h
+ * @author Jim Jiang (jim@lotlab.org)
+ * @brief 简单的GPIO操作封装
+ * @version 0.1
+ * @date 2021-07-28
+ * 
+ * @copyright Copyright (c) GDUT ESAC 2021
+ * 
+ */
 
+#pragma once
 #include "gd32vf103_gpio.h"
 
 #define _GPIO_BANK(pin) (GPIO_BASE + (pin >> 5) * 0x400)

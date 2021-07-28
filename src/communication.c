@@ -1,3 +1,14 @@
+/**
+ * @file communication.c
+ * @author Jim Jiang (jim@lotlab.org)
+ * @brief 通讯相关。定义了通讯协议，并处理底层串口收发
+ * @version 0.1
+ * @date 2021-07-28
+ * 
+ * @copyright Copyright (c) GDUT ESAC 2021
+ * 
+ */
+
 #include "communication.h"
 #include "config.h"
 #include "motor_control.h"
@@ -49,6 +60,7 @@ static enum CommState comm_state = STAGE_HEAD;
  */
 static bool comm_ChecksumValidate()
 {
+    // todo: 判断CRC
     return true;
 }
 
@@ -57,6 +69,7 @@ static bool comm_ChecksumValidate()
     static type name##_buff[size] = { 0 }; \
     static uint16_t name##_head = 0, name##_tail = 0;
 
+// 串口发送Ringbuffer
 RING_BUFFER(uart_tx, uint8_t, 64);
 
 /**
@@ -119,6 +132,7 @@ static void comm_AckState(uint8_t state)
  */
 static void comm_CmdParser()
 {
+    // 检查校验和
     if (!comm_ChecksumValidate()) {
         return comm_AckState(CMD_NACK);
     }
@@ -139,12 +153,12 @@ static void comm_CmdParser()
             return comm_AckState(CMD_INVALID_ARG);
         config_SetPIDParam((struct PIDParam*)data_buffer);
         break;
-    case CMD_PARAM_SAVE:
+    case CMD_PARAM_SAVE: // 保存参数
         if (data_len != 0)
             return comm_AckState(CMD_INVALID_ARG);
         config_Write();
         break;
-    case CMD_PARAM_IGNORE:
+    case CMD_PARAM_IGNORE: // 读取参数
         if (data_len != 0)
             return comm_AckState(CMD_INVALID_ARG);
         config_Read();
@@ -202,7 +216,7 @@ void comm_Rx(uint8_t dat)
         if (dat == MAGIC_NUM_END) {
             comm_CmdParser();
         } else {
-            // invalid end, skip and reset.
+            // 错误结束符号，直接重置状态忽略数据
         }
         break;
     default:
@@ -245,10 +259,12 @@ void comm_Init()
 
 void USART1_IRQHandler(void)
 {
+    // 数据接收中断
     if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE)) {
         uint8_t dat = usart_data_receive(USART0);
         comm_Rx(dat);
     }
+    // 数据发送中断
     if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE)) {
         if (uart_tx_head != uart_tx_tail) {
             usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
