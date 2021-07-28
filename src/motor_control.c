@@ -217,7 +217,8 @@ void motor_SetSpeed(int16_t speeds[4])
     memcpy(motor_targetSpeeds, speeds, sizeof(motor_targetSpeeds));
 }
 
-uint32_t decoder_val[4] = { 0 };
+int32_t decoder_val[4] = { 0 };
+uint16_t decoder_last_val[4] = { 0 };
 
 /**
  * @brief 电机控制Routine
@@ -230,14 +231,15 @@ static void motor_Routine()
         uint32_t timer = TIMER1 + i * 0x400;
 
         uint32_t v = timer_counter_read(timer);
-        uint32_t lastV = decoder_val[i] % 0x10000;
-        delta[i] = lastV - v;
+        delta[i] = decoder_last_val[i] - v;
 
         // 修正Overflow
         if (ABS(delta[i]) > 0x8000) {
             delta[i] -= delta[i] > 0 ? 0x10000 : -0x10000;
         }
         decoder_val[i] += delta[i];
+
+        decoder_last_val[i] = v;
     }
 
     // PID 控制电机

@@ -1,9 +1,17 @@
 #include "communication.h"
 #include "config.h"
 #include "motor_control.h"
+
+#include "gd32vf103_dma.h"
+#include "gd32vf103_eclic.h"
+#include "gd32vf103_usart.h"
+#include "gpio.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+
+#define ARRAYNUM(arr_nanme) (uint32_t)(sizeof(arr_nanme) / sizeof(*(arr_nanme)))
 
 /**
  * @brief 通信解析状态机状态
@@ -44,6 +52,13 @@ static bool comm_ChecksumValidate()
     return true;
 }
 
+#define RING_BUFFER(name, type, size)      \
+    const uint16_t name##_size = size;     \
+    static type name##_buff[size] = { 0 }; \
+    static uint16_t name##_head = 0, name##_tail = 0;
+
+RING_BUFFER(uart_tx, uint8_t, 64);
+
 /**
  * @brief 串口发送数据
  * 
@@ -52,7 +67,16 @@ static bool comm_ChecksumValidate()
  */
 static void comm_Tx(uint8_t* dat, uint8_t len)
 {
-    // todo:
+    bool empty = uart_tx_tail == uart_tx_head;
+    for (size_t i = 0; i < len; i++) {
+        uart_tx_buff[uart_tx_head++] = dat[i];
+        uart_tx_head %= uart_tx_size;
+    }
+
+    if (empty) {
+        usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
+        uart_tx_tail %= uart_tx_size;
+    }
 }
 
 /**
@@ -60,7 +84,7 @@ static void comm_Tx(uint8_t* dat, uint8_t len)
  * 
  * @param odoms 4个里程计的数值
  */
-void comm_SendOdom(uint32_t odoms[])
+void comm_SendOdom(int32_t odoms[])
 {
     uint8_t dat[] = {
         MAGIC_NUM_HEAD,
@@ -183,5 +207,52 @@ void comm_Rx(uint8_t dat)
         break;
     default:
         break;
+    }
+}
+
+/**
+ * @brief 初始化通信串口
+ * 
+ */
+void comm_Init()
+{
+    /* enable USART clock */
+    rcu_periph_clock_enable(RCU_USART1);
+    rcu_periph_clock_enable(RCU_GPIOA);
+
+    // 初始化 PIN
+    gpio_init_pin(GPIO_PA(2), GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ);
+    gpio_init_pin(GPIO_PA(3), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+
+    /* USART configure */
+    usart_deinit(USART1);
+    usart_baudrate_set(USART1, 115200U);
+    usart_word_length_set(USART1, USART_WL_8BIT);
+    usart_stop_bit_set(USART1, USART_STB_1BIT);
+    usart_parity_config(USART1, USART_PM_NONE);
+    usart_hardware_flow_rts_config(USART1, USART_RTS_DISABLE);
+    usart_hardware_flow_cts_config(USART1, USART_CTS_DISABLE);
+    usart_receive_config(USART1, USART_RECEIVE_ENABLE);
+    usart_transmit_config(USART1, USART_TRANSMIT_ENABLE);
+    usart_enable(USART1);
+
+    eclic_global_interrupt_enable();
+    eclic_priority_group_set(ECLIC_PRIGROUP_LEVEL3_PRIO1);
+    eclic_irq_enable(USART1_IRQn, 1, 0);
+    usart_interrupt_enable(USART1, USART_INT_RBNE);
+    usart_interrupt_enable(USART1, USART_INT_TBE);
+}
+
+void USART1_IRQHandler(void)
+{
+    if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE)) {
+        uint8_t dat = usart_data_receive(USART0);
+        comm_Rx(dat);
+    }
+    if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE)) {
+        if (uart_tx_head != uart_tx_tail) {
+            usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
+            uart_tx_tail %= uart_tx_size;
+        }
     }
 }

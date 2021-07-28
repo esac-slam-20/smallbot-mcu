@@ -25,7 +25,9 @@ add_executable(${TARGET}.elf
     ${DRIVER_ROOT}/system_gd32vf103.c
     ${DRIVER_ROOT}/Source/gd32vf103_gpio.c
     ${DRIVER_ROOT}/Source/gd32vf103_timer.c
+    ${DRIVER_ROOT}/Source/gd32vf103_usart.c
     ${DRIVER_ROOT}/Source/gd32vf103_rcu.c
+    ${DRIVER_ROOT}/Source/gd32vf103_eclic.c
     ${SDK_CORE_ROOT}/drivers/n200_func.c
     ${SDK_INIT_ROOT}/init.c
     ${SDK_INIT_ROOT}/handlers.c

@@ -1,7 +1,15 @@
 {
     "files.associations": {
         "gd32vf103_gpio.h": "c",
-        "systick.h": "c"
+        "systick.h": "c",
+        "gd32vf103_usart.h": "c",
+        "array": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "utility": "c",
+        "gd32vf103_dma.h": "c",
+        "gd32vf103_eclic.h": "c",
+        "communication.h": "c"
     },
     "C_Cpp.default.includePath": [
         "src",

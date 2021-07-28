@@ -23,5 +23,10 @@ enum CommCmd {
  * 
  * @param odoms 4个里程计的数值
  */
-void comm_SendOdom(uint32_t odoms[]);
+void comm_SendOdom(int32_t odoms[]);
 
+/**
+ * @brief 初始化通信串口
+ * 
+ */
+void comm_Init();
