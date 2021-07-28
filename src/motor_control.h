@@ -17,3 +17,16 @@ struct Motor
     // 里程计的通道
     uint8_t OdomChannel;
 };
+
+/**
+ * @brief 初始化所有相关
+ * 
+ */
+void motor_Init();
+
+/**
+ * @brief 设置电机目标速度
+ * 
+ * @param speeds 电机速度，rpm
+ */
+void motor_SetSpeed(int16_t speeds[4]);

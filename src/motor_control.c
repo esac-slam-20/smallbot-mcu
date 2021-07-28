@@ -1,10 +1,16 @@
 #include "motor_control.h"
+#include "communication.h"
+#include "config.h"
 #include "gpio.h"
+#include "pid.h"
 #include <stdbool.h>
+#include <string.h>
 
 #include "gd32vf103_timer.h"
 
 #define MOTOR_COUNT 4
+#define PWM_MAX 1000
+#define ABS(a) ((a) > 0 ? (a) : -(a))
 
 /**
  * @brief 电机配置
@@ -14,22 +20,22 @@ struct Motor motors[MOTOR_COUNT] = {
     { .PinCtrlA = GPIO_PA(4),
         .PinCtrlB = GPIO_PA(5),
         .PWMChannel = 0,
-        .OdomChannel = 0 },
+        .OdomChannel = 1 },
     { .PinCtrlA = GPIO_PA(6),
         .PinCtrlB = GPIO_PA(7),
         .PWMChannel = 1,
-        .OdomChannel = 1 },
+        .OdomChannel = 2 },
     { .PinCtrlA = GPIO_PB(12),
         .PinCtrlB = GPIO_PB(13),
         .PWMChannel = 2,
-        .OdomChannel = 2 },
+        .OdomChannel = 3 },
     { .PinCtrlA = GPIO_PB(14),
         .PinCtrlB = GPIO_PB(15),
         .PWMChannel = 3,
-        .OdomChannel = 3 },
+        .OdomChannel = 0 },
 };
 
-void motor_SetPWM(struct Motor* motor, bool cw, uint16_t pwm)
+static void motor_setPWM(struct Motor* motor, bool cw, uint16_t pwm)
 {
     // 设置方向
     gpio_bit_write(GPIO_PIN(motor->PinCtrlA), cw);
@@ -40,49 +46,60 @@ void motor_SetPWM(struct Motor* motor, bool cw, uint16_t pwm)
 }
 
 /**
+ * @brief 设置指定电机的PWM值
+ * 
+ * @param motor 电机序号
+ * @param pwm PWM值，范围为[-1, 1]。正数正转，负数反转。
+ */
+static void motor_SetPWM(uint8_t motor, float pwm)
+{
+    if (motor >= MOTOR_COUNT)
+        return;
+    motor_setPWM(&motors[motor], pwm > 0, ABS(pwm) * PWM_MAX);
+}
+
+/**
  * @brief 初始化电机
  * 
  */
-void motor_InitMotor()
+static void motor_InitMotor()
 {
-    timer_oc_parameter_struct timer_ocinitpara;
-    timer_parameter_struct timer_initpara;
-    timer_break_parameter_struct timer_breakpara;
+    timer_parameter_struct timer_initpara = {
+        .prescaler = 107, // 分频系数
+        .alignedmode = TIMER_COUNTER_EDGE,
+        .clockdivision = TIMER_CKDIV_DIV1,
+        .counterdirection = TIMER_COUNTER_UP,
+        .period = PWM_MAX, // PWM计数MAX
+        .repetitioncounter = 0,
+    };
+
+    timer_oc_parameter_struct timer_ocinitpara = {
+        .outputstate = TIMER_CCX_ENABLE, // 启用输出
+        .outputnstate = TIMER_CCXN_DISABLE, // 禁用对偶输出
+        .ocpolarity = TIMER_OC_POLARITY_HIGH, // 高极性
+        .ocidlestate = TIMER_OC_IDLE_STATE_LOW, // 默认低电平
+    };
 
     rcu_periph_clock_enable(RCU_TIMER0);
 
     timer_deinit(TIMER0);
-    
+
     // 初始化Timer
-    timer_struct_para_init(&timer_initpara);
-    timer_initpara.prescaler         = 5399;
-    timer_initpara.alignedmode       = TIMER_COUNTER_EDGE;
-    timer_initpara.counterdirection  = TIMER_COUNTER_UP;
-    timer_initpara.period            = 10000; // 周期
-    timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
-    timer_initpara.repetitioncounter = 0;
     timer_init(TIMER0, &timer_initpara);
 
-    /* initialize TIMER channel output parameter struct */
-    timer_channel_output_struct_para_init(&timer_ocinitpara);
-    timer_ocinitpara.outputstate  = TIMER_CCX_ENABLE;
-    timer_ocinitpara.outputnstate = TIMER_CCXN_DISABLE; // 禁用对偶输出
-    timer_ocinitpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
-    timer_ocinitpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
-
-    // GPIO 重映射，将外设资源给PWM输出
+    // GPIO 初始化，设定为AF
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8);
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
 
-    for (size_t i = 0; i < MOTOR_COUNT; i++)
-    {
+    for (size_t i = 0; i < MOTOR_COUNT; i++) {
         struct Motor motor = motors[i];
         // IO 控制初始化
         gpio_init_pin(motor.PinCtrlA, GPIO_MODE_OUT_PP, GPIO_OSPEED_10MHZ);
         gpio_init_pin(motor.PinCtrlB, GPIO_MODE_OUT_PP, GPIO_OSPEED_10MHZ);
 
+        // PWM输出配置
         timer_channel_output_config(TIMER0, motor.PWMChannel, &timer_ocinitpara);
         timer_channel_output_mode_config(TIMER0, motor.PWMChannel, TIMER_OC_MODE_PWM0);
         timer_channel_output_shadow_config(TIMER0, motor.PWMChannel, TIMER_OC_SHADOW_DISABLE);
@@ -93,6 +110,155 @@ void motor_InitMotor()
     timer_enable(TIMER0);
 }
 
-void motor_InitOdom() {
-    
+/**
+ * @brief 初始化光电编码器
+ * 
+ */
+static void motor_InitEncoder()
+{
+    timer_ic_parameter_struct timer_icinitpara = {
+        .icpolarity = TIMER_IC_POLARITY_RISING,
+        .icselection = TIMER_IC_SELECTION_DIRECTTI,
+        .icprescaler = TIMER_IC_PSC_DIV1,
+        .icfilter = 0
+    };
+
+    timer_parameter_struct timer_initpara = {
+        .prescaler = 107, // 分频系数
+        .alignedmode = TIMER_COUNTER_EDGE,
+        .counterdirection = TIMER_COUNTER_UP,
+        .period = 65535, // 最大周期
+        .clockdivision = TIMER_CKDIV_DIV1,
+        .repetitioncounter = 0
+    };
+
+    // 重映射 GPIO
+    // TIMER1: PA15, PB3
+    gpio_pin_remap_config(GPIO_TIMER2_PARTIAL_REMAP, ENABLE); // PB4, PB5
+    // TIMER3: PB6, PB7
+    // TIMER4: A0, A1
+
+    // GPIO初始化
+    gpio_init_pin(GPIO_PA(15), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+    gpio_init_pin(GPIO_PB(3), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+    gpio_init_pin(GPIO_PB(4), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+    gpio_init_pin(GPIO_PB(5), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+    gpio_init_pin(GPIO_PB(6), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+    gpio_init_pin(GPIO_PB(7), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+    gpio_init_pin(GPIO_PA(0), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+    gpio_init_pin(GPIO_PA(1), GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ);
+
+    // 启用外设时钟
+    rcu_periph_clock_enable(RCU_TIMER1);
+    rcu_periph_clock_enable(RCU_TIMER2);
+    rcu_periph_clock_enable(RCU_TIMER3);
+    rcu_periph_clock_enable(RCU_TIMER4);
+
+    for (size_t i = 0; i < MOTOR_COUNT; i++) {
+        uint32_t timer = TIMER1 + motors[i].OdomChannel * 0x400;
+
+        // 初始化外设
+        timer_deinit(timer);
+        timer_init(timer, &timer_initpara);
+
+        // 输入捕获模式
+        timer_input_capture_config(timer, TIMER_CH_0, &timer_icinitpara);
+        timer_input_capture_config(timer, TIMER_CH_1, &timer_icinitpara);
+        timer_quadrature_decoder_mode_config(timer, TIMER_ENCODER_MODE2, TIMER_IC_POLARITY_BOTH_EDGE, TIMER_IC_POLARITY_BOTH_EDGE);
+
+        // 启用 Timer
+        timer_auto_reload_shadow_enable(timer);
+        timer_enable(timer);
+    }
+}
+
+/**
+ * @brief 初始化主定时器
+ * 
+ */
+static void motor_InitTimer()
+{
+    timer_parameter_struct timer_initpara = {
+        .prescaler = 10799,
+        .alignedmode = TIMER_COUNTER_EDGE,
+        .counterdirection = TIMER_COUNTER_UP,
+        .period = 50,
+        .clockdivision = TIMER_CKDIV_DIV1,
+    };
+
+    rcu_periph_clock_enable(RCU_TIMER5);
+
+    timer_deinit(TIMER5);
+    timer_init(TIMER5, &timer_initpara);
+
+    timer_interrupt_enable(TIMER5, TIMER_INT_UP);
+    timer_enable(TIMER5);
+}
+
+/**
+ * @brief 初始化所有相关
+ * 
+ */
+void motor_Init()
+{
+    motor_InitMotor();
+    motor_InitEncoder();
+    motor_InitTimer();
+}
+
+static uint16_t motor_targetSpeeds[4];
+/**
+ * @brief 设置电机目标速度
+ * 
+ * @param speeds 电机速度，rpm
+ */
+void motor_SetSpeed(int16_t speeds[4])
+{
+    memcpy(motor_targetSpeeds, speeds, sizeof(motor_targetSpeeds));
+}
+
+uint32_t decoder_val[4] = { 0 };
+
+/**
+ * @brief 电机控制Routine
+ * 
+ */
+static void motor_Routine()
+{
+    int16_t delta[4] = { 0 };
+    for (size_t i = 0; i < MOTOR_COUNT; i++) {
+        uint32_t timer = TIMER1 + i * 0x400;
+
+        uint32_t v = timer_counter_read(timer);
+        uint32_t lastV = decoder_val[i] % 0x10000;
+        delta[i] = lastV - v;
+
+        // 修正Overflow
+        if (ABS(delta[i]) > 0x8000) {
+            delta[i] -= delta[i] > 0 ? 0x10000 : -0x10000;
+        }
+        decoder_val[i] += delta[i];
+    }
+
+    // PID 控制电机
+    for (size_t i = 0; i < MOTOR_COUNT; i++) {
+        float val = pid_DoPID(i, (float)motor_targetSpeeds[i] / 60, (float)delta[i] / 0.005 / config_EncoderTicks);
+        motor_SetPWM(i, val);
+    }
+
+    // 上报数据
+    comm_SendOdom(decoder_val);
+}
+
+/**
+ * @brief 中断处理
+ * 
+ */
+void TIMER5_IRQHandler(void)
+{
+    if (SET == timer_interrupt_flag_get(TIMER5, TIMER_INT_UP)) {
+        timer_interrupt_flag_clear(TIMER5, TIMER_INT_UP);
+        // 执行周期操作
+        motor_Routine();
+    }
 }

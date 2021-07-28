@@ -1,8 +1,9 @@
 #include "communication.h"
+#include "config.h"
+#include "motor_control.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include "config.h"
 
 /**
  * @brief 通信解析状态机状态
@@ -59,20 +60,21 @@ static void comm_Tx(uint8_t* dat, uint8_t len)
  * 
  * @param odoms 4个里程计的数值
  */
-void comm_SendOdom(int32_t odoms[]) {
-    uint8_t dat[] = { 
+void comm_SendOdom(uint32_t odoms[])
+{
+    uint8_t dat[] = {
         MAGIC_NUM_HEAD,
         CMD_INFO_ODOM,
-        12, 
+        12,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 
+        0x00, 0x00,
         MAGIC_NUM_END
     };
 
-    memcpy(dat+3, odoms, 12);
+    memcpy(dat + 3, odoms, 12);
     comm_Tx(dat, sizeof(dat));
 }
 
@@ -101,7 +103,7 @@ static void comm_CmdParser()
     case CMD_SET_SPEED: // 设置电机目标速度
         if (data_len != 8)
             return comm_AckState(CMD_INVALID_ARG);
-        // todo: set speed
+        motor_SetSpeed((int16_t*)data_buffer);
         break;
     case CMD_PARAM_ENCODER: // 配置编码器
         if (data_len != 2)
@@ -111,7 +113,7 @@ static void comm_CmdParser()
     case CMD_PARAM_PID: // 配置PID
         if (data_len != 12)
             return comm_AckState(CMD_INVALID_ARG);
-        config_SetPIDParam((struct PIDParam *)data_buffer);
+        config_SetPIDParam((struct PIDParam*)data_buffer);
         break;
     case CMD_PARAM_SAVE:
         if (data_len != 0)

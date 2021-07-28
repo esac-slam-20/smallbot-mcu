@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 enum CommCmd {
     // 参数相关
     CMD_ACK = 0x00, // ACK
@@ -15,4 +17,11 @@ enum CommCmd {
     
     CMD_INFO_ODOM = 0x80, // 里程计信息
 };
+
+/**
+ * @brief 发送里程计信息
+ * 
+ * @param odoms 4个里程计的数值
+ */
+void comm_SendOdom(uint32_t odoms[]);
 
