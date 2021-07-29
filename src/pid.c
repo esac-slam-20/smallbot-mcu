@@ -1,17 +1,14 @@
 #include "pid.h"
 #include "config.h"
 
-float pid_accu_diff[4];
-static float Error=0,Error_last=0,Integral_Error=0,Differential_Error=0;
-static float Proportion_OUT,Integral_OUT,Differential_OUT,PID_OUT;
-
-
+static float Error = 0, Error_last = 0, Integral_Error = 0, Differential_Error = 0;
+static float Proportion_OUT, Integral_OUT, Differential_OUT, PID_OUT;
 
 float pid_DoPID(uint8_t motor, float targetSpd, float currentSpd)
 {
     float Ki; // 积分
     float Kd; // 微分
-    int T=5; // 周期
+    int T = 5; // 周期
     Ki = config_PIDParam.Prop * T * (1 / config_PIDParam.Int); //积分项系数，即提取出积分项公式中所有可人为设定的参数
     Kd = config_PIDParam.Prop * config_PIDParam.Diff * (1 / T); //微分项系数，即提取出微分项公式中所有可人为设定的参数
 
