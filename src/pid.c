@@ -25,6 +25,6 @@ float pid_DoPID(uint8_t motor, float targetSpd, float currentSpd)
 
     PID_OUT = Proportion_OUT + Integral_OUT + Differential_OUT;
     //PID最终输出 = 比例项输出 + 积分项输出 + 微分项输出
-
+    Error_last =Error;
     return PID_OUT;
 }
