@@ -20,12 +20,12 @@ uint16_t config_EncoderTicks = 333;
 
 void config_Read()
 {
-    // todo: read from EEPROM
+    // 草，没有dataflash给我读
 }
 
 void config_Write()
 {
-    // todo: write to EEPROM
+    // 草，没有dataflash给我写
 }
 
 void config_Init()
