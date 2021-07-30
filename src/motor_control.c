@@ -281,14 +281,15 @@ static void motor_Routine()
         if (ABS(delta[i]) > 0x8000) {
             delta[i] -= delta[i] > 0 ? 0x10000 : -0x10000;
         }
-        decoder_val[i] += delta[i];
+        // 1信号=4Tick
+        decoder_val[i] += delta[i] / 4;
 
         decoder_last_val[i] = v;
     }
 
     // PID 控制电机
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
-        float val = pid_DoPID(i, (float)motor_targetSpeeds[i] / 60, (float)delta[i] / 0.005 / config_EncoderTicks / 4);
+        float val = pid_DoPID(i, (float)motor_targetSpeeds[i] / 60, (float)delta[i] / 4 / 0.005 / config_EncoderTicks);
         motor_SetPWM(i, val);
     }
 
