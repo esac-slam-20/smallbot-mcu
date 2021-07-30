@@ -1,12 +1,15 @@
-#include "gpio.h"
+#include "gd32vf103_eclic.h"
 #include "gd32vf103_usart.h"
+#include "gpio.h"
 
 #include "systick.h"
 #include <stdint.h>
 
-#include "motor_control.h"
 #include "communication.h"
 #include "config.h"
+#include "motor_control.h"
+
+#include "stdio.h"
 
 /**
  * @brief 初始化串口调试用UART
@@ -24,7 +27,7 @@ static void uart_init()
 
     /* USART configure */
     usart_deinit(USART2);
-    usart_baudrate_set(USART2, 115200U);
+    usart_baudrate_set(USART2, 57600);
     usart_word_length_set(USART2, USART_WL_8BIT);
     usart_stop_bit_set(USART2, USART_STB_1BIT);
     usart_parity_config(USART2, USART_PM_NONE);
@@ -48,29 +51,37 @@ static void init()
 
 int main()
 {
+    SystemInit();
+    eclic_init(ECLIC_NUM_INTERRUPTS);
+    eclic_mode_enable();
+
+    eclic_global_interrupt_enable();
+    eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
+
     init();
 
+    printf("Hello, world.\r\n");
+
+    /* enable the led clock */
+    rcu_periph_clock_enable(RCU_GPIOC);
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_10MHZ, GPIO_PIN_13);
+    gpio_bit_reset(GPIOC, GPIO_PIN_13);
 
     while (1) {
+        delay_1ms(500);
         gpio_bit_set(GPIOC, GPIO_PIN_13);
         delay_1ms(500);
         gpio_bit_reset(GPIOC, GPIO_PIN_13);
-        delay_1ms(500);
+        printf(".\r\n");
     }
 }
 
-/**
- * @brief 输出重定向至UART
- * 
- * @param ch 
- * @return int 
- */
-int _put_char(int ch)
+int _write(int fd, char* buf, int size)
 {
-    usart_data_transmit(USART2, (uint8_t)ch);
-    while (usart_flag_get(USART2, USART_FLAG_TBE) == RESET) {
+    for (int i = 0; i < size; i++) {
+        usart_data_transmit(USART2, buf[i]);
+        while (usart_flag_get(USART2, USART_FLAG_TBE) == RESET) {
+        }
     }
-
-    return ch;
+    return size;
 }

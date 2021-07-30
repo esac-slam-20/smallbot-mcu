@@ -70,7 +70,7 @@ target_link_options(${TARGET}.elf PRIVATE
 
 # Post processing command to create a hex file 
 add_custom_command(TARGET ${TARGET}.elf POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O ihex  ${TARGET}.elf  ${TARGET}.hex
+        COMMAND ${CMAKE_OBJCOPY} -O binary  ${TARGET}.elf  ${TARGET}.bin
         COMMENT "Invoking: Hexdump")
 
         

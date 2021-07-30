@@ -67,7 +67,7 @@ static bool comm_ChecksumValidate()
 #define RING_BUFFER(name, type, size)      \
     const uint16_t name##_size = size;     \
     static type name##_buff[size] = { 0 }; \
-    static uint16_t name##_head = 0, name##_tail = 0;
+    static volatile uint16_t name##_head = 0, name##_tail = 0;
 
 // 串口发送Ringbuffer
 RING_BUFFER(uart_tx, uint8_t, 64);
@@ -80,13 +80,13 @@ RING_BUFFER(uart_tx, uint8_t, 64);
  */
 static void comm_Tx(uint8_t* dat, uint8_t len)
 {
-    bool empty = uart_tx_tail == uart_tx_head;
     for (size_t i = 0; i < len; i++) {
         uart_tx_buff[uart_tx_head++] = dat[i];
         uart_tx_head %= uart_tx_size;
     }
 
-    if (empty) {
+    // 当前没有正在发送的指令,直接发送.
+    if (RESET == usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE)) {
         usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
         uart_tx_tail %= uart_tx_size;
     }
@@ -250,8 +250,6 @@ void comm_Init()
     usart_transmit_config(USART1, USART_TRANSMIT_ENABLE);
     usart_enable(USART1);
 
-    eclic_global_interrupt_enable();
-    eclic_priority_group_set(ECLIC_PRIGROUP_LEVEL3_PRIO1);
     eclic_irq_enable(USART1_IRQn, 1, 0);
     usart_interrupt_enable(USART1, USART_INT_RBNE);
     usart_interrupt_enable(USART1, USART_INT_TBE);
@@ -261,7 +259,7 @@ void USART1_IRQHandler(void)
 {
     // 数据接收中断
     if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE)) {
-        uint8_t dat = usart_data_receive(USART0);
+        uint8_t dat = usart_data_receive(USART1);
         comm_Rx(dat);
     }
     // 数据发送中断
@@ -269,6 +267,8 @@ void USART1_IRQHandler(void)
         if (uart_tx_head != uart_tx_tail) {
             usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
             uart_tx_tail %= uart_tx_size;
+        } else {
+            usart_interrupt_flag_clear(USART1, USART_INT_FLAG_TBE);
         }
     }
 }

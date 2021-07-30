@@ -1,7 +1,7 @@
 #include "pid.h"
 #include "config.h"
 
-static struct MidVal {
+struct MidVal {
     float Error;
     float Error_last;
     float Integral_Error;

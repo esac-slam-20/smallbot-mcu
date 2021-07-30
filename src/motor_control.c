@@ -16,8 +16,10 @@
 #include "pid.h"
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "gd32vf103_timer.h"
+#include "gd32vf103_eclic.h"
 
 #define MOTOR_COUNT 4
 #define PWM_MAX 1000
@@ -99,6 +101,8 @@ static void motor_InitMotor()
     };
 
     rcu_periph_clock_enable(RCU_TIMER0);
+    rcu_periph_clock_enable(RCU_AF);
+    rcu_periph_clock_enable(RCU_GPIOA);
 
     timer_deinit(TIMER0);
 
@@ -112,15 +116,17 @@ static void motor_InitMotor()
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
 
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
-        struct Motor motor = motors[i];
+        struct Motor * motor = &motors[i];
         // IO 控制初始化
-        gpio_init_pin(motor.PinCtrlA, GPIO_MODE_OUT_PP, GPIO_OSPEED_10MHZ);
-        gpio_init_pin(motor.PinCtrlB, GPIO_MODE_OUT_PP, GPIO_OSPEED_10MHZ);
+        gpio_init_pin(motor->PinCtrlA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ);
+        gpio_init_pin(motor->PinCtrlB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ);
+        gpio_bit_reset(GPIO_PIN(motor->PinCtrlA));
+        gpio_bit_reset(GPIO_PIN(motor->PinCtrlB));
 
         // PWM输出配置
-        timer_channel_output_config(TIMER0, motor.PWMChannel, &timer_ocinitpara);
-        timer_channel_output_mode_config(TIMER0, motor.PWMChannel, TIMER_OC_MODE_PWM0);
-        timer_channel_output_shadow_config(TIMER0, motor.PWMChannel, TIMER_OC_SHADOW_DISABLE);
+        timer_channel_output_config(TIMER0, motor->PWMChannel, &timer_ocinitpara);
+        timer_channel_output_mode_config(TIMER0, motor->PWMChannel, TIMER_OC_MODE_PWM0);
+        timer_channel_output_shadow_config(TIMER0, motor->PWMChannel, TIMER_OC_SHADOW_DISABLE);
     }
 
     timer_primary_output_config(TIMER0, ENABLE);
@@ -142,7 +148,7 @@ static void motor_InitEncoder()
     };
 
     timer_parameter_struct timer_initpara = {
-        .prescaler = 107, // 分频系数
+        .prescaler = 0, // 分频系数
         .alignedmode = TIMER_COUNTER_EDGE,
         .counterdirection = TIMER_COUNTER_UP,
         .period = 65535, // 最大周期
@@ -151,7 +157,9 @@ static void motor_InitEncoder()
     };
 
     // 重映射 GPIO
-    // TIMER1: PA15, PB3
+    // TIMER1: 
+    gpio_pin_remap_config(GPIO_TIMER1_PARTIAL_REMAP0, ENABLE); // PA15, PB3
+    // TIMER2:
     gpio_pin_remap_config(GPIO_TIMER2_PARTIAL_REMAP, ENABLE); // PB4, PB5
     // TIMER3: PB6, PB7
     // TIMER4: A0, A1
@@ -209,6 +217,7 @@ static void motor_InitTimer()
     timer_deinit(TIMER5);
     timer_init(TIMER5, &timer_initpara);
 
+    eclic_irq_enable(TIMER5_IRQn, 1, 0);
     timer_interrupt_enable(TIMER5, TIMER_INT_UP);
     timer_enable(TIMER5);
 }
@@ -237,6 +246,7 @@ static int16_t motor_targetSpeeds[4];
  */
 void motor_SetSpeed(int16_t speeds[4])
 {
+    printf("Set motor speed to %d %d %d %d.\r\n", speeds[0], speeds[1], speeds[2], speeds[3]);
     memcpy(motor_targetSpeeds, speeds, sizeof(motor_targetSpeeds));
 }
 
@@ -261,10 +271,11 @@ static void motor_Routine()
     // 读取编码器数据
     int16_t delta[4] = { 0 };
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
-        uint32_t timer = TIMER1 + i * 0x400;
+        uint8_t index = motors[i].OdomChannel;
+        uint32_t timer = TIMER1 + index * 0x400;
 
         uint32_t v = timer_counter_read(timer);
-        delta[i] = decoder_last_val[i] - v;
+        delta[i] = v - decoder_last_val[i];
 
         // 修正Overflow
         if (ABS(delta[i]) > 0x8000) {
@@ -277,7 +288,7 @@ static void motor_Routine()
 
     // PID 控制电机
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
-        float val = pid_DoPID(i, (float)motor_targetSpeeds[i] / 60, (float)delta[i] / 0.005 / config_EncoderTicks);
+        float val = pid_DoPID(i, (float)motor_targetSpeeds[i] / 60, (float)delta[i] / 0.005 / config_EncoderTicks / 4);
         motor_SetPWM(i, val);
     }
 

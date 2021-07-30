@@ -22,6 +22,9 @@ $(BUILD_DIR)/Makefile :
 clean:
 	rm -rf $(BUILD_DIR)
 
+flash: build
+	dfu-util -d 28e9:0189 -a 0 --dfuse-address 0x08000000:leave -D $(BUILD_DIR)/main.bin
+
 .PHONY: setup build $(SUBTARGETS) $(SUBTARGETS_CLEAN) clean
 .SUFFIXES:
 
