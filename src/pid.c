@@ -11,6 +11,7 @@ static struct MidVal val[4] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0
 
 float pid_DoPID(uint8_t motor, float targetSpd, float currentSpd)
 {
+    float maxVal = 5.55; //currentSpd最大值333rpm
     float Ki; // 积分
     float Kd; // 微分
     int T = 5; // 周期
@@ -28,7 +29,12 @@ float pid_DoPID(uint8_t motor, float targetSpd, float currentSpd)
     Differential_OUT = Kd * val[motor].Differential_Error; //微分项输出 = Kd * 偏差的微分
 
     PID_OUT = Proportion_OUT + Integral_OUT + Differential_OUT;
+    if (PID_OUT < -maxVal)
+        PID_OUT = -maxVal;
+    if (PID_OUT > maxVal)
+        PID_OUT = maxVal;
     //PID最终输出 = 比例项输出 + 积分项输出 + 微分项输出
+
     val[motor].Error_last = Error;
     return PID_OUT;
 }
