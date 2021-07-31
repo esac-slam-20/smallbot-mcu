@@ -15,11 +15,11 @@
 #include "gpio.h"
 #include "pid.h"
 #include <stdbool.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
-#include "gd32vf103_timer.h"
 #include "gd32vf103_eclic.h"
+#include "gd32vf103_timer.h"
 
 #define MOTOR_COUNT 4
 #define PWM_MAX 1000
@@ -116,7 +116,7 @@ static void motor_InitMotor()
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_11);
 
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
-        struct Motor * motor = &motors[i];
+        struct Motor* motor = &motors[i];
         // IO 控制初始化
         gpio_init_pin(motor->PinCtrlA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ);
         gpio_init_pin(motor->PinCtrlB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ);
@@ -157,7 +157,7 @@ static void motor_InitEncoder()
     };
 
     // 重映射 GPIO
-    // TIMER1: 
+    // TIMER1:
     gpio_pin_remap_config(GPIO_TIMER1_PARTIAL_REMAP0, ENABLE); // PA15, PB3
     // TIMER2:
     gpio_pin_remap_config(GPIO_TIMER2_PARTIAL_REMAP, ENABLE); // PB4, PB5
@@ -289,7 +289,9 @@ static void motor_Routine()
 
     // PID 控制电机
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
-        float val = pid_DoPID(i, (float)motor_targetSpeeds[i] / 60, (float)delta[i] / 4 / 0.005 / config_EncoderTicks);
+        float targetSpeed = motor_targetSpeeds[i] / 60.0f;
+        float currentSpeed = delta[i] / 4 / 0.005f / config_EncoderTicks;
+        float val = pid_DoPID(i, targetSpeed, currentSpeed);
         motor_SetPWM(i, val);
     }
 
