@@ -102,7 +102,7 @@ void comm_SendOdom(int32_t odoms[])
     uint8_t dat[] = {
         MAGIC_NUM_HEAD,
         CMD_INFO_ODOM,
-        12,
+        16,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
@@ -111,7 +111,7 @@ void comm_SendOdom(int32_t odoms[])
         MAGIC_NUM_END
     };
 
-    memcpy(dat + 3, odoms, 12);
+    memcpy(dat + 3, odoms, 16);
     comm_Tx(dat, sizeof(dat));
 }
 

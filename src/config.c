@@ -11,6 +11,7 @@
 #include "config.h"
 #include <stdint.h>
 
+#include <stdio.h>
 #include <string.h>
 
 // PID 配置
@@ -35,10 +36,12 @@ void config_Init()
 
 void config_SetPIDParam(struct PIDParam* param)
 {
+    printf("Set PID param to P: %d, I: %d, D: %d.\r\n", (int)param->Prop, (int)param->Int, (int)param->Diff);
     memcpy(&config_PIDParam, param, sizeof(config_PIDParam));
 }
 
 void config_SetEncoderTicks(uint16_t ticks)
 {
+    printf("Set encoder ticks to %d.\r\n", ticks);
     config_EncoderTicks = ticks;
 }
