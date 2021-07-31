@@ -51,10 +51,8 @@ static void init()
 
 int main()
 {
-    SystemInit();
-    eclic_init(ECLIC_NUM_INTERRUPTS);
-    eclic_mode_enable();
-
+    _init();
+    
     eclic_global_interrupt_enable();
     eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
 
