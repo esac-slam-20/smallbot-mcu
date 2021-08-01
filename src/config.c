@@ -15,7 +15,7 @@
 #include <string.h>
 
 // PID 配置
-struct PIDParam config_PIDParam = { 0.002958, 1.19, 5 };
+struct PIDParam config_PIDParam = { 0.055, 819, 0 };
 // 编码器数值
 uint16_t config_EncoderTicks = 333;
 
