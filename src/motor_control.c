@@ -21,8 +21,13 @@
 #include "gd32vf103_eclic.h"
 #include "gd32vf103_timer.h"
 
+// 电机数目
 #define MOTOR_COUNT 4
+// PWM 分辨率
 #define PWM_MAX 1000
+// 电机最低控制速度，rps。小于此速度时直接锁电机。
+#define MIN_PID_SPEED 1
+
 #define ABS(a) ((a) > 0 ? (a) : -(a))
 
 /**
@@ -57,10 +62,15 @@ struct Motor motors[MOTOR_COUNT] = {
  */
 static void motor_setPWM(struct Motor* motor, bool cw, uint16_t pwm)
 {
-    // 设置方向
-    gpio_bit_write(GPIO_PIN(motor->PinCtrlA), cw);
-    gpio_bit_write(GPIO_PIN(motor->PinCtrlB), !cw);
-
+    if (pwm > 0) {
+        // 设置方向
+        gpio_bit_write(GPIO_PIN(motor->PinCtrlA), cw);
+        gpio_bit_write(GPIO_PIN(motor->PinCtrlB), !cw);
+    } else {
+        // 锁电机
+        gpio_bit_write(GPIO_PIN(motor->PinCtrlA), false);
+        gpio_bit_write(GPIO_PIN(motor->PinCtrlB), false);
+    }
     // 设置占空比
     timer_channel_output_pulse_value_config(TIMER0, motor->PWMChannel, pwm);
 }
@@ -85,7 +95,7 @@ static void motor_SetPWM(uint8_t motor, float pwm)
 static void motor_InitMotor()
 {
     timer_parameter_struct timer_initpara = {
-        .prescaler = 107, // 分频系数
+        .prescaler = 9, // 分频系数
         .alignedmode = TIMER_COUNTER_EDGE,
         .clockdivision = TIMER_CKDIV_DIV1,
         .counterdirection = TIMER_COUNTER_UP,
@@ -291,7 +301,11 @@ static void motor_Routine()
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
         float targetSpeed = motor_targetSpeeds[i] / 60.0f;
         float currentSpeed = delta[i] / 4 / 0.005f / config_EncoderTicks;
-        float val = pid_DoPID(i, targetSpeed, currentSpeed);
+        float val = 0;
+        // 判断是否可以PID
+        if (ABS(targetSpeed) > MIN_PID_SPEED) {
+            val = pid_DoPID(i, targetSpeed, currentSpeed);
+        }
         motor_SetPWM(i, val);
     }
 
