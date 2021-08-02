@@ -279,7 +279,7 @@ static uint16_t decoder_last_val[4] = { 0 };
 static void motor_Routine()
 {
     // 读取编码器数据
-    int16_t delta[4] = { 0 };
+    int32_t delta[4] = { 0 };
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
         uint8_t index = motors[i].OdomChannel;
         uint32_t timer = TIMER1 + index * 0x400;
