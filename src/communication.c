@@ -42,8 +42,10 @@ const uint8_t MAGIC_NUM_HEAD = 0x55;
 // 命令尾部魔术字
 const uint8_t MAGIC_NUM_END = 0xAA;
 
+#define MAX_DATA_SIZE 32
+
 // 数据暂存
-static uint8_t data_buffer[32] = { 0 };
+static uint8_t data_buffer[MAX_DATA_SIZE] = { 0 };
 // 校验和暂存
 static uint8_t checksum[2] = { 0 }, checksum_index = 0;
 // 命令暂存
@@ -203,7 +205,7 @@ void comm_Rx(uint8_t dat)
         break;
     case STAGE_DAT:
         data_buffer[data_index++] = dat;
-        if (data_index == data_len) {
+        if (data_index == data_len || data_index == MAX_DATA_SIZE) {
             comm_state++;
             checksum_index = 0;
         }
