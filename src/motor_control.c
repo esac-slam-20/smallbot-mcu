@@ -64,8 +64,9 @@ static void motor_setPWM(struct Motor* motor, bool cw, uint16_t pwm)
 {
     if (pwm > 0) {
         // 设置方向
-        gpio_bit_write(GPIO_PIN(motor->PinCtrlA), cw);
-        gpio_bit_write(GPIO_PIN(motor->PinCtrlB), !cw);
+        // 右手定则，轮子向电机看
+        gpio_bit_write(GPIO_PIN(motor->PinCtrlA), !cw);
+        gpio_bit_write(GPIO_PIN(motor->PinCtrlB), cw);
     } else {
         // 锁电机
         gpio_bit_write(GPIO_PIN(motor->PinCtrlA), false);
@@ -288,6 +289,7 @@ static void motor_Routine()
 
         uint32_t v = timer_counter_read(timer);
         delta[i] = v - decoder_last_val[i];
+        delta[i] = -delta[i]; // 反转delta
 
         // 修正Overflow
         if (ABS(delta[i]) > 0x8000) {
