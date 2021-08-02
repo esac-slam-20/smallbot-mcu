@@ -97,7 +97,7 @@ static void comm_Tx(uint8_t* dat, uint8_t len)
  * 
  * @param odoms 4个里程计的数值
  */
-void comm_SendOdom(int32_t odoms[])
+void comm_SendOdom(int32_t* odoms)
 {
     uint8_t dat[] = {
         MAGIC_NUM_HEAD,
@@ -111,7 +111,10 @@ void comm_SendOdom(int32_t odoms[])
         MAGIC_NUM_END
     };
 
-    memcpy(dat + 3, odoms, 16);
+    for (size_t i = 0; i < 12; i++) {
+        dat[3 + i] = ((uint8_t*)odoms)[i];
+    }
+
     comm_Tx(dat, sizeof(dat));
 }
 

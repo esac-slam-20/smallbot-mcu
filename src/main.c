@@ -52,7 +52,7 @@ static void init()
 int main()
 {
     _init();
-    
+
     eclic_global_interrupt_enable();
     eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
 
