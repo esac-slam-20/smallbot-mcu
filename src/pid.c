@@ -10,14 +10,15 @@ static struct MidVal val[4] = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } };
 
 float pid_DoPID(uint8_t motor, float targetSpd, float currentSpd)
 {
-    float maxVal = 1; 
+    float maxVal = 1;
     float Ki; // 积分
     float Kd; // 微分
     float T = 5; // 周期
     float Error = 0.0;
     float Differential_Error = 0.0;
     float Proportion_OUT, Integral_OUT, Differential_OUT, PID_OUT;
-
+    if (currentSpd != 0 && currentSpd * targetSpd < 0)
+        val[motor].Integral_Error = 0;
     Ki = config_PIDParam.Prop * T * (1 / config_PIDParam.Int); //积分项系数，即提取出积分项公式中所有可人为设定的参数
     Kd = config_PIDParam.Prop * config_PIDParam.Diff * (1 / T); //微分项系数，即提取出微分项公式中所有可人为设定的参数
 
