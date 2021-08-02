@@ -7,7 +7,15 @@ struct MidVal {
 };
 
 static struct MidVal val[4] = { { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 0 } };
-
+/**
+ * @brief 
+ * 
+ * 
+ * @param motor 电机ID
+ * @param targetSpd 带方向电机目标速度单位rps
+ * @param currentSpd 当前电机速度rps
+ * @return float 
+ */
 float pid_DoPID(uint8_t motor, float targetSpd, float currentSpd)
 {
     float maxVal = 1;
@@ -17,7 +25,7 @@ float pid_DoPID(uint8_t motor, float targetSpd, float currentSpd)
     float Error = 0.0;
     float Differential_Error = 0.0;
     float Proportion_OUT, Integral_OUT, Differential_OUT, PID_OUT;
-    if (currentSpd != 0 && currentSpd * targetSpd < 0) {
+    if (currentSpd * targetSpd < 0) {//避免跳变上电机，先归零
         val[motor].Integral_Error = 0;
         val[motor].Error_last = 0;
         return 0;
