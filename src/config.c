@@ -37,7 +37,9 @@ void config_Init()
 void config_SetPIDParam(struct PIDParam* param)
 {
     printf("Set PID param to P: %d, I: %d, D: %d.\r\n", (int)param->Prop, (int)param->Int, (int)param->Diff);
-    memcpy(&config_PIDParam, param, sizeof(config_PIDParam));
+    config_PIDParam.Prop = param->Prop;
+    config_PIDParam.Int = param->Int;
+    config_PIDParam.Diff = param->Diff;
 }
 
 void config_SetEncoderTicks(uint16_t ticks)

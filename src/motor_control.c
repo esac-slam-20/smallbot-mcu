@@ -256,8 +256,10 @@ static int16_t motor_targetSpeeds[4];
  */
 void motor_SetSpeed(int16_t speeds[4])
 {
+    for (size_t i = 0; i < MOTOR_COUNT; i++) {
+        motor_targetSpeeds[i] = speeds[i];
+    }
     printf("Set motor speed to %d %d %d %d.\r\n", speeds[0], speeds[1], speeds[2], speeds[3]);
-    memcpy(motor_targetSpeeds, speeds, sizeof(motor_targetSpeeds));
 }
 
 /**

@@ -42,8 +42,10 @@ const uint8_t MAGIC_NUM_HEAD = 0x55;
 // 命令尾部魔术字
 const uint8_t MAGIC_NUM_END = 0xAA;
 
+#define MAX_DATA_SIZE 32
+
 // 数据暂存
-static uint8_t data_buffer[32] = { 0 };
+static uint8_t data_buffer[MAX_DATA_SIZE] = { 0 };
 // 校验和暂存
 static uint8_t checksum[2] = { 0 }, checksum_index = 0;
 // 命令暂存
@@ -97,7 +99,7 @@ static void comm_Tx(uint8_t* dat, uint8_t len)
  * 
  * @param odoms 4个里程计的数值
  */
-void comm_SendOdom(int32_t odoms[])
+void comm_SendOdom(int32_t* odoms)
 {
     uint8_t dat[] = {
         MAGIC_NUM_HEAD,
@@ -111,7 +113,10 @@ void comm_SendOdom(int32_t odoms[])
         MAGIC_NUM_END
     };
 
-    memcpy(dat + 3, odoms, 16);
+    for (size_t i = 0; i < 12; i++) {
+        dat[3 + i] = ((uint8_t*)odoms)[i];
+    }
+
     comm_Tx(dat, sizeof(dat));
 }
 
@@ -200,7 +205,7 @@ void comm_Rx(uint8_t dat)
         break;
     case STAGE_DAT:
         data_buffer[data_index++] = dat;
-        if (data_index == data_len) {
+        if (data_index == data_len || data_index == MAX_DATA_SIZE) {
             comm_state++;
             checksum_index = 0;
         }
