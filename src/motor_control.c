@@ -250,6 +250,14 @@ void motor_Init()
  */
 static int16_t motor_targetSpeeds[4];
 
+#define COUNTER_RELOAD 200 // 1s
+
+/**
+ * @brief 数据存活计数器
+ * 
+ */
+static uint16_t data_valid_counter = 0;
+
 /**
  * @brief 设置电机目标速度
  * 
@@ -257,6 +265,7 @@ static int16_t motor_targetSpeeds[4];
  */
 void motor_SetSpeed(int16_t speeds[4])
 {
+    data_valid_counter = COUNTER_RELOAD;
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
         motor_targetSpeeds[i] = speeds[i];
     }
@@ -299,6 +308,17 @@ static void motor_Routine()
         decoder_val[i] += delta[i] / 4;
 
         decoder_last_val[i] = v;
+    }
+
+    // 防止上层控制失效导致速度一直保持
+    if (data_valid_counter > 0) {
+        data_valid_counter--;
+        if (data_valid_counter == 0) {
+            motor_targetSpeeds[0] = 0;
+            motor_targetSpeeds[1] = 0;
+            motor_targetSpeeds[2] = 0;
+            motor_targetSpeeds[3] = 0;
+        }
     }
 
     // PID 控制电机
