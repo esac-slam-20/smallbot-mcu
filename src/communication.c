@@ -30,6 +30,7 @@
  */
 enum CommState {
     STAGE_HEAD, // 头部
+    STAGE_FRAME_ID, // 帧ID
     STAGE_CMD, // 命令
     STAGE_LEN, // 长度
     STAGE_DAT, // 数据
@@ -50,6 +51,8 @@ static uint8_t data_buffer[MAX_DATA_SIZE] = { 0 };
 static uint8_t checksum[2] = { 0 }, checksum_index = 0;
 // 命令暂存
 static uint8_t data_cmd, data_index, data_len;
+// 帧ID暂存
+static uint16_t frame_id = 0, recv_frame_id;
 
 // 当前状态机状态
 static enum CommState comm_state = STAGE_HEAD;
@@ -103,6 +106,7 @@ void comm_SendOdom(int32_t* odoms)
 {
     uint8_t dat[] = {
         MAGIC_NUM_HEAD,
+        frame_id & 0xFF, frame_id >> 8,
         CMD_INFO_ODOM,
         16,
         0x00, 0x00, 0x00, 0x00,
@@ -112,6 +116,7 @@ void comm_SendOdom(int32_t* odoms)
         0x00, 0x00,
         MAGIC_NUM_END
     };
+    frame_id++;
 
     for (size_t i = 0; i < 12; i++) {
         dat[3 + i] = ((uint8_t*)odoms)[i];
@@ -125,9 +130,10 @@ void comm_SendOdom(int32_t* odoms)
  * 
  * @param state 
  */
-static void comm_AckState(uint8_t state)
+static void comm_AckState(uint16_t recvFrameID, uint8_t state)
 {
-    uint8_t dat[] = { MAGIC_NUM_HEAD, state, 0, 0x00, 0x00, MAGIC_NUM_END };
+    uint8_t dat[] = { MAGIC_NUM_HEAD, frame_id & 0xFF, frame_id >> 8, state, 2, recvFrameID & 0xFF, recvFrameID >> 8, 0x00, 0x00, MAGIC_NUM_END };
+    frame_id++;
     comm_Tx(dat, sizeof(dat));
 }
 
@@ -139,40 +145,40 @@ static void comm_CmdParser()
 {
     // 检查校验和
     if (!comm_ChecksumValidate()) {
-        return comm_AckState(CMD_NACK);
+        return comm_AckState(recv_frame_id, CMD_NACK);
     }
 
     switch (data_cmd) {
     case CMD_SET_SPEED: // 设置电机目标速度
         if (data_len != 8)
-            return comm_AckState(CMD_INVALID_ARG);
+            return comm_AckState(recv_frame_id, CMD_INVALID_ARG);
         motor_SetSpeed((int16_t*)data_buffer);
         break;
     case CMD_PARAM_ENCODER: // 配置编码器
         if (data_len != 2)
-            return comm_AckState(CMD_INVALID_ARG);
+            return comm_AckState(recv_frame_id, CMD_INVALID_ARG);
         config_SetEncoderTicks(*(uint16_t*)data_buffer);
         break;
     case CMD_PARAM_PID: // 配置PID
         if (data_len != 12)
-            return comm_AckState(CMD_INVALID_ARG);
+            return comm_AckState(recv_frame_id, CMD_INVALID_ARG);
         config_SetPIDParam((struct PIDParam*)data_buffer);
         break;
     case CMD_PARAM_SAVE: // 保存参数
         if (data_len != 0)
-            return comm_AckState(CMD_INVALID_ARG);
+            return comm_AckState(recv_frame_id, CMD_INVALID_ARG);
         config_Write();
         break;
     case CMD_PARAM_IGNORE: // 读取参数
         if (data_len != 0)
-            return comm_AckState(CMD_INVALID_ARG);
+            return comm_AckState(recv_frame_id, CMD_INVALID_ARG);
         config_Read();
         break;
     default:
-        return comm_AckState(CMD_INVALID_ARG);
+        return comm_AckState(recv_frame_id, CMD_INVALID_ARG);
     }
 
-    comm_AckState(CMD_ACK);
+    comm_AckState(recv_frame_id, CMD_ACK);
 }
 
 /**
@@ -186,8 +192,17 @@ void comm_Rx(uint8_t dat)
     case STAGE_HEAD:
         if (dat == MAGIC_NUM_HEAD) {
             comm_state++;
+            checksum_index = 0;
         } else {
             // 数据错误，等待下次验证
+        }
+        break;
+    case STAGE_FRAME_ID:
+        // 利用checksum的位置暂存frameID
+        checksum[checksum_index++] = dat;
+        if (checksum_index == 2) {
+            recv_frame_id = checksum[0] + (checksum[1] << 8);
+            comm_state++;
         }
         break;
     case STAGE_CMD:
