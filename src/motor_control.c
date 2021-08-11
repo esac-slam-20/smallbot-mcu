@@ -228,7 +228,7 @@ static void motor_InitTimer()
     timer_deinit(TIMER5);
     timer_init(TIMER5, &timer_initpara);
 
-    eclic_irq_enable(TIMER5_IRQn, 1, 0);
+    eclic_irq_enable(TIMER5_IRQn, 0, 0);
     timer_interrupt_enable(TIMER5, TIMER_INT_UP);
     timer_enable(TIMER5);
 }

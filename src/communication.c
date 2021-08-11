@@ -74,6 +74,16 @@ static bool comm_ChecksumValidate()
 // 串口发送Ringbuffer
 RING_BUFFER(uart_tx, uint8_t, 64);
 
+static void trySend() 
+{
+    if (RESET == usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE)) {
+        usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
+        uart_tx_tail %= uart_tx_size;
+
+        usart_interrupt_enable(USART1, USART_INT_TBE);
+    }
+}
+
 /**
  * @brief 串口发送数据
  * 
@@ -88,10 +98,7 @@ static void comm_Tx(uint8_t* dat, uint8_t len)
     }
 
     // 当前没有正在发送的指令,直接发送.
-    if (RESET == usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE)) {
-        usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
-        uart_tx_tail %= uart_tx_size;
-    }
+    trySend();
 }
 
 /**
@@ -201,11 +208,12 @@ void comm_Rx(uint8_t dat)
         // LEN=0则跳过DAT
         if (data_len == 0) {
             comm_state++;
+            checksum_index = 0;
         }
         break;
     case STAGE_DAT:
         data_buffer[data_index++] = dat;
-        if (data_index == data_len || data_index == MAX_DATA_SIZE) {
+        if (data_index >= data_len || data_index >= MAX_DATA_SIZE) {
             comm_state++;
             checksum_index = 0;
         }
@@ -255,25 +263,25 @@ void comm_Init()
     usart_transmit_config(USART1, USART_TRANSMIT_ENABLE);
     usart_enable(USART1);
 
-    eclic_irq_enable(USART1_IRQn, 1, 0);
+    eclic_irq_enable(USART1_IRQn, 0, 1);
     usart_interrupt_enable(USART1, USART_INT_RBNE);
-    usart_interrupt_enable(USART1, USART_INT_TBE);
 }
 
 void USART1_IRQHandler(void)
 {
     // 数据接收中断
-    if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE)) {
+    if (SET == usart_interrupt_flag_get(USART1, USART_INT_FLAG_RBNE)) {
         uint8_t dat = usart_data_receive(USART1);
         comm_Rx(dat);
     }
     // 数据发送中断
-    if (RESET != usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE)) {
+    if (SET == usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE)) {
+        usart_interrupt_flag_clear(USART1, USART_INT_FLAG_TBE);
         if (uart_tx_head != uart_tx_tail) {
             usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
             uart_tx_tail %= uart_tx_size;
         } else {
-            usart_interrupt_flag_clear(USART1, USART_INT_FLAG_TBE);
+            usart_interrupt_disable(USART1, USART_INT_TBE);
         }
     }
 }
