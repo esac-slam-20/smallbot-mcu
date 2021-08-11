@@ -10,6 +10,7 @@
 #include "motor_control.h"
 
 #include "stdio.h"
+#include "debug.h"
 
 /**
  * @brief 初始化串口调试用UART
@@ -58,7 +59,7 @@ int main()
 
     init();
 
-    printf("Hello, world.\r\n");
+    PRINT("Hello, world.\r\n");
 
     /* enable the led clock */
     rcu_periph_clock_enable(RCU_GPIOC);
@@ -70,7 +71,7 @@ int main()
         gpio_bit_set(GPIOC, GPIO_PIN_13);
         delay_1ms(500);
         gpio_bit_reset(GPIOC, GPIO_PIN_13);
-        printf(".\r\n");
+        PRINT(".\r\n");
     }
 }
 

@@ -10,7 +10,8 @@
         "gd32vf103_dma.h": "c",
         "gd32vf103_eclic.h": "c",
         "communication.h": "c",
-        "motor_control.h": "c"
+        "motor_control.h": "c",
+        "debug.h": "c"
     },
     "C_Cpp.default.includePath": [
         "src",

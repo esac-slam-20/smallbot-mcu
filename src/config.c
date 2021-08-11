@@ -11,7 +11,7 @@
 #include "config.h"
 #include <stdint.h>
 
-#include <stdio.h>
+#include "debug.h"
 #include <string.h>
 
 // PID 配置
@@ -36,7 +36,7 @@ void config_Init()
 
 void config_SetPIDParam(struct PIDParam* param)
 {
-    printf("Set PID param to P: %d, I: %d, D: %d.\r\n", (int)param->Prop, (int)param->Int, (int)param->Diff);
+    PRINT("Set PID param to P: %d, I: %d, D: %d.\r\n", (int)param->Prop, (int)param->Int, (int)param->Diff);
     config_PIDParam.Prop = param->Prop;
     config_PIDParam.Int = param->Int;
     config_PIDParam.Diff = param->Diff;
@@ -44,6 +44,6 @@ void config_SetPIDParam(struct PIDParam* param)
 
 void config_SetEncoderTicks(uint16_t ticks)
 {
-    printf("Set encoder ticks to %d.\r\n", ticks);
+    PRINT("Set encoder ticks to %d.\r\n", ticks);
     config_EncoderTicks = ticks;
 }

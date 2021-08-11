@@ -17,6 +17,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include "debug.h"
 
 #include "gd32vf103_eclic.h"
 #include "gd32vf103_timer.h"
@@ -269,7 +270,7 @@ void motor_SetSpeed(int16_t speeds[4])
     for (size_t i = 0; i < MOTOR_COUNT; i++) {
         motor_targetSpeeds[i] = speeds[i];
     }
-    printf("Set motor speed to %d %d %d %d.\r\n", speeds[0], speeds[1], speeds[2], speeds[3]);
+    PRINT("Set motor speed to %d %d %d %d.\r\n", speeds[0], speeds[1], speeds[2], speeds[3]);
 }
 
 /**

@@ -44,7 +44,14 @@ target_include_directories(${TARGET}.elf PRIVATE
 
 target_compile_definitions(${TARGET}.elf PRIVATE 
     "GD32VF103V_EVAL"
+    # "DEBUG"
 )
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+target_compile_definitions(${TARGET}.elf PRIVATE 
+    "DEBUG"
+)
+endif()
 
 target_compile_options(${TARGET}.elf PRIVATE 
     "-O3"
