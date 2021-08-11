@@ -9,6 +9,7 @@ enum CommCmd {
     CMD_INVALID_ARG, // 参数错误
 
     CMD_SET_SPEED = 0x10, // 设置速度
+    CMD_GET_ODOM = 0x11, // 获取ODOM
     
     CMD_PARAM_ENCODER = 0x20, // 配置编码器
     CMD_PARAM_PID = 0x21, // 配置PID参数

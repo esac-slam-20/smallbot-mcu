@@ -30,3 +30,9 @@ void motor_Init();
  * @param speeds 电机速度，rpm
  */
 void motor_SetSpeed(int16_t speeds[4]);
+
+/**
+ * @brief 上报Odom数据
+ * 
+ */
+void motor_SendOdom();

@@ -12,12 +12,12 @@
 #include "motor_control.h"
 #include "communication.h"
 #include "config.h"
+#include "debug.h"
 #include "gpio.h"
 #include "pid.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include "debug.h"
 
 #include "gd32vf103_eclic.h"
 #include "gd32vf103_timer.h"
@@ -333,7 +333,10 @@ static void motor_Routine()
         }
         motor_SetPWM(i, val);
     }
+}
 
+void motor_SendOdom()
+{
     // 上报数据
     comm_SendOdom(decoder_val);
 }

@@ -74,7 +74,7 @@ static bool comm_ChecksumValidate()
 // 串口发送Ringbuffer
 RING_BUFFER(uart_tx, uint8_t, 64);
 
-static void trySend() 
+static void trySend()
 {
     if (RESET == usart_interrupt_flag_get(USART1, USART_INT_FLAG_TBE)) {
         usart_data_transmit(USART1, uart_tx_buff[uart_tx_tail++]);
@@ -154,32 +154,40 @@ static void comm_CmdParser()
         if (data_len != 8)
             return comm_AckState(CMD_INVALID_ARG);
         motor_SetSpeed((int16_t*)data_buffer);
+        comm_AckState(CMD_ACK);
+        break;
+    case CMD_GET_ODOM:
+        if (data_len != 0)
+            return comm_AckState(CMD_INVALID_ARG);
+        motor_SendOdom();
         break;
     case CMD_PARAM_ENCODER: // 配置编码器
         if (data_len != 2)
             return comm_AckState(CMD_INVALID_ARG);
         config_SetEncoderTicks(*(uint16_t*)data_buffer);
+        comm_AckState(CMD_ACK);
         break;
     case CMD_PARAM_PID: // 配置PID
         if (data_len != 12)
             return comm_AckState(CMD_INVALID_ARG);
         config_SetPIDParam((struct PIDParam*)data_buffer);
+        comm_AckState(CMD_ACK);
         break;
     case CMD_PARAM_SAVE: // 保存参数
         if (data_len != 0)
             return comm_AckState(CMD_INVALID_ARG);
         config_Write();
+        comm_AckState(CMD_ACK);
         break;
     case CMD_PARAM_IGNORE: // 读取参数
         if (data_len != 0)
             return comm_AckState(CMD_INVALID_ARG);
         config_Read();
+        comm_AckState(CMD_ACK);
         break;
     default:
         return comm_AckState(CMD_INVALID_ARG);
     }
-
-    comm_AckState(CMD_ACK);
 }
 
 /**
