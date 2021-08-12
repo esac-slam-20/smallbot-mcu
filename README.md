@@ -4,7 +4,9 @@
 
 ## 编译
 
-首先安装 [RISC-V GCC](https://xpack.github.io/riscv-none-embed-gcc/)，将其添加到你的环境变量中。
+首先安装 RISC-V GCC，[手动安装指南](https://xpack.github.io/riscv-none-embed-gcc/install/#manual-install)。
+
+> 我们推荐使用手动安装方式安装，并将其添加到系统环境变量中。
 
 然后：
 ``` bash
