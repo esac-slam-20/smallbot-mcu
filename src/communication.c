@@ -271,7 +271,7 @@ void comm_Init()
     usart_transmit_config(USART1, USART_TRANSMIT_ENABLE);
     usart_enable(USART1);
 
-    eclic_irq_enable(USART1_IRQn, 0, 1);
+    eclic_irq_enable(USART1_IRQn, 1, 1);
     usart_interrupt_enable(USART1, USART_INT_RBNE);
 }
 
