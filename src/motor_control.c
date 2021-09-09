@@ -10,6 +10,7 @@
  */
 
 #include "motor_control.h"
+#include "batt.h"
 #include "communication.h"
 #include "config.h"
 #include "debug.h"
@@ -260,6 +261,12 @@ static int16_t motor_targetSpeeds[4];
 static uint16_t data_valid_counter = 0;
 
 /**
+ * @brief 电量测量计数器
+ * 
+ */
+static uint16_t batt_counter = 0;
+
+/**
  * @brief 设置电机目标速度
  * 
  * @param speeds 电机速度，rpm
@@ -332,6 +339,12 @@ static void motor_Routine()
             val = pid_DoPID(i, targetSpeed, currentSpeed);
         }
         motor_SetPWM(i, val);
+    }
+
+    // 电量测量
+    if (batt_counter++ > 10 * 200) {
+        batt_counter = 0;
+        batt_Measure();
     }
 }
 

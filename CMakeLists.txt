@@ -20,9 +20,11 @@ add_executable(${TARGET}.elf
     src/config.c
     src/motor_control.c
     src/pid.c
+    src/batt.c
     
     src/systick.c
     ${DRIVER_ROOT}/system_gd32vf103.c
+    ${DRIVER_ROOT}/Source/gd32vf103_adc.c
     ${DRIVER_ROOT}/Source/gd32vf103_gpio.c
     ${DRIVER_ROOT}/Source/gd32vf103_timer.c
     ${DRIVER_ROOT}/Source/gd32vf103_usart.c

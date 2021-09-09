@@ -8,6 +8,7 @@
 #include "communication.h"
 #include "config.h"
 #include "motor_control.h"
+#include "batt.h"
 
 #include "stdio.h"
 #include "debug.h"
@@ -48,6 +49,7 @@ static void init()
     config_Init(); // 配置初始化
     motor_Init(); // 初始化电机控制
     comm_Init(); // 初始化通信接口
+    batt_Init(); // 初始化电量测量
 }
 
 int main()
