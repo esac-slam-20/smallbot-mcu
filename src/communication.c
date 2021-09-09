@@ -110,19 +110,41 @@ void comm_SendOdom(int32_t* odoms)
 {
     uint8_t dat[] = {
         MAGIC_NUM_HEAD,
-        CMD_INFO_ODOM,
-        16,
+        CMD_INFO_ODOM, // Cmd
+        16, // Len
+        0x00, 0x00, 0x00, 0x00, // Data
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00,
+        0x00, 0x00, // Checksum
         MAGIC_NUM_END
     };
 
     for (size_t i = 0; i < 12; i++) {
         dat[3 + i] = ((uint8_t*)odoms)[i];
     }
+
+    comm_Tx(dat, sizeof(dat));
+}
+
+/**
+ * @brief 发送电池电压数据
+ * 
+ * @param mv 电压数据，mv
+ */
+void comm_SendBatt(uint16_t mv)
+{
+    uint8_t dat[] = {
+        MAGIC_NUM_HEAD,
+        CMD_INFO_BATT, // Cmd
+        2, // Len
+        0x00, 0x00, // Data
+        0x00, 0x00, // Checksum
+        MAGIC_NUM_END
+    };
+
+    dat[3] = (mv >> 0) & 0x100;
+    dat[4] = (mv >> 8) & 0x100;
 
     comm_Tx(dat, sizeof(dat));
 }
