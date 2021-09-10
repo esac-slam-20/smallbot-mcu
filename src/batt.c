@@ -58,7 +58,8 @@ void batt_Measure()
     /* return regular channel sample value */
     uint16_t raw = adc_regular_data_read(ADC1);
 
-    voltage = (uint32_t)raw * 3300 / 4096;
+    // 28k + 100k 电阻分压
+    voltage = (uint32_t)raw * 3300 / 4096 * (100 + 28) / 28;
 }
 
 /**
