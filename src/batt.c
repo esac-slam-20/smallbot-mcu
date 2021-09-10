@@ -37,7 +37,7 @@ void batt_Init()
     adc_calibration_enable(ADC1);
 }
 
-static uint16_t voltage = 12000;
+static volatile uint16_t voltage = 12000;
 
 /**
  * @brief 电量测量

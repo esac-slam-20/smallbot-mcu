@@ -342,7 +342,7 @@ static void motor_Routine()
     }
 
     // 电量测量
-    if (batt_counter++ > 10 * 200) {
+    if (batt_counter++ > 1 * 200) {
         batt_counter = 0;
         batt_Measure();
     }
