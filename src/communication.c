@@ -10,9 +10,9 @@
  */
 
 #include "communication.h"
+#include "batt.h"
 #include "config.h"
 #include "motor_control.h"
-#include "batt.h"
 
 #include "gd32vf103_dma.h"
 #include "gd32vf103_eclic.h"
@@ -144,8 +144,8 @@ void comm_SendBatt(uint16_t mv)
         MAGIC_NUM_END
     };
 
-    dat[3] = (mv >> 0) & 0x100;
-    dat[4] = (mv >> 8) & 0x100;
+    dat[3] = (mv >> 0) & 0xFF;
+    dat[4] = (mv >> 8) & 0xFF;
 
     comm_Tx(dat, sizeof(dat));
 }
@@ -188,7 +188,7 @@ static void comm_CmdParser()
         if (data_len != 0)
             return comm_AckState(CMD_INVALID_ARG);
         batt_SendVoltage();
-        break;    
+        break;
     case CMD_PARAM_ENCODER: // 配置编码器
         if (data_len != 2)
             return comm_AckState(CMD_INVALID_ARG);

@@ -17,6 +17,7 @@ void batt_Init()
 
     gpio_init(GPIOB, GPIO_MODE_AIN, GPIO_OSPEED_50MHZ, GPIO_PIN_0);
 
+    adc_deinit(ADC1);
     /* ADC mode config */
     adc_mode_config(ADC_MODE_FREE);
     /* ADC data alignment config */
@@ -36,7 +37,7 @@ void batt_Init()
     adc_calibration_enable(ADC1);
 }
 
-static uint16_t voltage = 12000;
+static volatile uint16_t voltage = 12000;
 
 /**
  * @brief 电量测量
@@ -45,7 +46,7 @@ static uint16_t voltage = 12000;
 void batt_Measure()
 {
     /* ADC regular channel config */
-    adc_regular_channel_config(ADC1, 0U, 8, ADC_SAMPLETIME_7POINT5);
+    adc_regular_channel_config(ADC1, 0U, ADC_CHANNEL_8, ADC_SAMPLETIME_7POINT5);
     /* ADC software trigger enable */
     adc_software_trigger_enable(ADC1, ADC_REGULAR_CHANNEL);
 
