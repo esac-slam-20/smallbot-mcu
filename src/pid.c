@@ -25,9 +25,13 @@ float pid_DoPID(uint8_t motor, float targetSpd, float currentSpd)
     float Error = 0.0;
     float Differential_Error = 0.0;
     float Proportion_OUT, Integral_OUT, Differential_OUT, PID_OUT;
-    if (currentSpd * targetSpd < 0 ||currentSpd >167 || currentSpd <-167) {//避免跳变上电机，以及currenSpd异常，先归零
+    if (currentSpd * targetSpd < 0 ||currentSpd >167 || currentSpd <-167) {//避免反转跳变电机，以及currenSpd异常，先归零
         val[motor].Integral_Error = 0;
         val[motor].Error_last = 0;
+        if(targetSpd<0)
+            return -0.01;
+        else if(targetSpd>0)
+            return 0.01;
         return 0;
     }
 
